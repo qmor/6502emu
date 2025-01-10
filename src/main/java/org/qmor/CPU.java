@@ -2,20 +2,27 @@ package org.qmor;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicInteger;
 //https://www.youtube.com/watch?v=qJgsuQoy9bc&t=29s
+//https://www.nesdev.org/wiki/Instruction_reference#LDA
 @RequiredArgsConstructor
 @Getter
 @Slf4j
 public class CPU {
-
+    @Setter
     private int PC;
+    @Setter
     private int SP;
+    @Setter
     private short A;
+    @Setter
     private short X;
+    @Setter
     private short Y;
+    @Setter
     private FlagRegister F = new FlagRegister();
 
     private final Memory memory;

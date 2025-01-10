@@ -13,12 +13,28 @@ class Test1 {
         CPU cpu = new CPU(memory);
         cpu.reset();
         memory.data[0xfffc] = (byte) OpCodes.LDA_IM.getOpcode();
-        var cycles = new AtomicInteger(2);
+        var cycles = new AtomicInteger(OpCodes.LDA_IM.getCycles());
         cpu.exec(cycles);
         assertEquals(0,cycles.get());
         assertTrue(cpu.getF().getAsBoolean(Flag.Z));
         assertFalse(cpu.getF().getAsBoolean(Flag.N));
     }
+
+    @Test
+    void testLdxImmediate() {
+        Memory memory = new Memory();
+        CPU cpu = new CPU(memory);
+        cpu.reset();
+        var op = OpCodes.LDX_IM;
+        memory.data[0xfffc] = (byte) op.getOpcode();
+        var cycles = new AtomicInteger(op.getCycles());
+        cpu.exec(cycles);
+        assertEquals(0,cycles.get());
+        assertTrue(cpu.getF().getAsBoolean(Flag.Z));
+        assertFalse(cpu.getF().getAsBoolean(Flag.N));
+    }
+
+
     @Test
     void testLdaZeroPage() {
         Memory memory = new Memory();
@@ -27,7 +43,7 @@ class Test1 {
         memory.data[0xfffc] = (byte) OpCodes.LDA_ZP.getOpcode();
         memory.data[0xfffd] = 0x42;
         memory.data[0x0042] = 0x14;
-        var cycles = new AtomicInteger(3);
+        var cycles = new AtomicInteger(OpCodes.LDA_ZP.getCycles());
         cpu.exec(cycles);
         assertEquals(0,cycles.get());
         assertFalse(cpu.getF().getAsBoolean(Flag.Z));
@@ -41,21 +57,12 @@ class Test1 {
         Memory memory = new Memory();
         CPU cpu = new CPU(memory);
         cpu.reset();
-        memory.data[0xfffc] = (byte) OpCodes.LDX_IM.getOpcode();
-        memory.data[0xfffd] = 0x10;
+        cpu.setX((short) 0x10);
 
         memory.data[0x0020] = 0x14;//value in zero page to be read to A
-
-        memory.data[0xfffe] = (byte) OpCodes.LDA_ZP_X.getOpcode();
-        memory.data[0xffff] = 0x10; //zero page address
-        var cycles = new AtomicInteger(2);
-        cpu.exec(cycles);
-        assertEquals(0,cycles.get());
-        assertFalse(cpu.getF().getAsBoolean(Flag.Z));
-        assertFalse(cpu.getF().getAsBoolean(Flag.N));
-        assertEquals(0x10,cpu.getX());
-
-        cycles.set(4);
+        memory.data[0xfffc] = (byte) OpCodes.LDA_ZP_X.getOpcode();
+        memory.data[0xfffd] = 0x10; //zero page address
+        var cycles = new AtomicInteger(OpCodes.LDA_ZP_X.getCycles());
         cpu.exec(cycles);
         assertEquals(0,cycles.get());
         assertFalse(cpu.getF().getAsBoolean(Flag.Z));
