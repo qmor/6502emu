@@ -1,5 +1,6 @@
 package org.qmor;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.HexFormat;
@@ -9,12 +10,16 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class InstructionSetTests {
 
+    Memory memory = new Memory();
+    CPU cpu = new CPU(memory);
+
+    @BeforeEach
+    public void setup() {
+        cpu.reset();
+    }
     @Test
     void JstAndRtsTest()
     {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         cpu.setPC(0x0600);
         var program = HexFormat.of().parseHex("200007EAEAEA");//JSR $0700 NOP NOP NOP
         System.arraycopy(program,0,memory.data,0x0600,program.length);
@@ -41,9 +46,6 @@ class InstructionSetTests {
     @Test
     void testJsr()
     {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         cpu.setPC(0xff00);
         var op = OpCodes.JSR;
         memory.data[0xff00] = (byte) op.getOpcode();
@@ -61,9 +63,6 @@ class InstructionSetTests {
 
     @Test
     void testLdaImmediate() {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         memory.data[0xfffc] = (byte) OpCodes.LDA_IM.getOpcode();
         memory.data[0xfffd] = (byte) 0x84;
         var cycles = new AtomicInteger(OpCodes.LDA_IM.getCycles());
@@ -75,9 +74,6 @@ class InstructionSetTests {
 
     @Test
     void testLdxImmediate() {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         var op = OpCodes.LDX_IM;
         memory.data[0xfffc] = (byte) op.getOpcode();
         var cycles = new AtomicInteger(op.getCycles());
@@ -90,9 +86,6 @@ class InstructionSetTests {
 
     @Test
     void testLdaZeroPage() {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         memory.data[0xfffc] = (byte) OpCodes.LDA_ZP.getOpcode();
         memory.data[0xfffd] = 0x42;
         memory.data[0x0042] = 0x14;
@@ -106,9 +99,6 @@ class InstructionSetTests {
 
     @Test
     void testLdxZeroPage() {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         var op = OpCodes.LDX_ZP;
         memory.data[0xfffc] = (byte) op.getOpcode();
         memory.data[0xfffd] = 0x42;
@@ -124,9 +114,6 @@ class InstructionSetTests {
 
     @Test
     void testLdaZeroPageX() {
-        Memory memory = new Memory();
-        CPU cpu = new CPU(memory);
-        cpu.reset();
         cpu.setX((short) 0x10);
 
         memory.data[0x0020] = 0x14;//value in zero page to be read to A
@@ -139,6 +126,33 @@ class InstructionSetTests {
         assertFalse(cpu.getF().getAsBoolean(Flag.N));
         assertEquals(0x14,cpu.getA());
 
+    }
+    @Test
+    void testLdaAbsolute()
+    {
+        System.arraycopy(HexFormat.of().parseHex("%02X8814".formatted(OpCodes.LDA_ABSOLUTE.getOpcode())), 0,memory.data,0,3);
+        memory.data[0x1488] = 56;
+        cpu.setPC(0);
+        var cycles = new AtomicInteger(OpCodes.LDA_ABSOLUTE.getCycles());
+        cpu.exec(cycles);
+        assertEquals(0,cycles.get());
+        assertFalse(cpu.getF().getAsBoolean(Flag.Z));
+        assertFalse(cpu.getF().getAsBoolean(Flag.N));
+        assertEquals(56,cpu.getA());
+    }
+
+    @Test
+    void testLdxAbsolute()
+    {
+        System.arraycopy(HexFormat.of().parseHex("%02X8814".formatted(OpCodes.LDX_ABSOLUTE.getOpcode())), 0,memory.data,0,3);
+        memory.data[0x1488] = 56;
+        cpu.setPC(0);
+        var cycles = new AtomicInteger(OpCodes.LDX_ABSOLUTE.getCycles());
+        cpu.exec(cycles);
+        assertEquals(0,cycles.get());
+        assertFalse(cpu.getF().getAsBoolean(Flag.Z));
+        assertFalse(cpu.getF().getAsBoolean(Flag.N));
+        assertEquals(56,cpu.getX());
     }
 
 

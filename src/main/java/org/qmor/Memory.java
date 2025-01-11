@@ -10,5 +10,6 @@ public class Memory {
     {
         Arrays.fill(data, (byte)0);
     }
+
 }
 

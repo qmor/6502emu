@@ -118,39 +118,44 @@ public class CPU {
                     setPC(returnAddress+1);
                     cycles.addAndGet(-3);
                 }
-                case LDA_IM -> {
-                    A = fetchByte(cycles);
-                    applyOpFunctions(op, A);
-                }
+                case LDA_IM -> A = fetchByte(cycles);
                 case LDA_ZP ->
                 {
                     final var zeroPageAddress = fetchByte(cycles);
                     A = readByte(cycles,zeroPageAddress);
-                    applyOpFunctions(op, A);
                 }
                 case LDA_ZP_X -> {
                     final var zeroPageAddress = fetchByte(cycles);
                     A = readByte(cycles,zeroPageAddress+X);
                     cycles.decrementAndGet();//because of zeroPageAddress+X
-                    applyOpFunctions(op, A);
+                }
+                case LDA_ABSOLUTE -> {
+                    var address = fetchWord(cycles);
+                    A = memory.data[address];
+                    cycles.decrementAndGet();
                 }
 
-                case LDX_IM -> {
-                    X = fetchByte(cycles);
-                    applyOpFunctions(op, X);
-                }
+                case LDX_IM -> X = fetchByte(cycles);
                 case LDX_ZP -> {
                     final var zeroPageAddress = fetchByte(cycles);
                     X = readByte(cycles,zeroPageAddress);
-                    applyOpFunctions(op, X);
                 }
-                case NOP ->
+                case LDX_ABSOLUTE ->
                 {
+                    var address = fetchWord(cycles);
+                    X = memory.data[address];
                     cycles.decrementAndGet();
                 }
-                default -> {
-                    throw new UnsupportedOperationException("Unsupported opcode: " + op);
-                }
+                case NOP -> cycles.decrementAndGet();
+                default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
+            }
+            if (OpGroups.REG_A_LOAD_CODES.contains(op))
+            {
+                applyOpFunctions(op, A);
+            }
+            else if (OpGroups.REG_X_LOAD_CODES.contains(op))
+            {
+                applyOpFunctions(op, X);
             }
             log.info("exec after {}, {}",op,cycles.get());
             printRegs();
