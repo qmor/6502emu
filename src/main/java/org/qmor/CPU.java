@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.atomic.AtomicInteger;
 //https://www.youtube.com/watch?v=qJgsuQoy9bc&t=29s
 //https://www.nesdev.org/wiki/Instruction_reference#LDA
+//http://www.6502.org/users/obelisk/6502/reference.html#JSR
+//https://www.masswerk.at/6502/
 @RequiredArgsConstructor
 @Getter
 @Slf4j
@@ -33,7 +35,7 @@ public class CPU {
     public void reset()
     {
         PC = 0xFFFC;
-        SP = 0x0100;
+        SP = 0x00FF;
         F.reset();
         A = X = Y = 0;
         memory.reset();
@@ -75,6 +77,21 @@ public class CPU {
         writeByte(cycles,address, (byte) (word&0xff));
         writeByte(cycles,address+1, (byte) ((word>>8)&0xff));
     }
+    private int readWord(AtomicInteger cycles, int address)
+    {
+        return readByte(cycles,address)| readByte(cycles,address+1)<<8;
+    }
+    private void writeWordToStack(AtomicInteger cycles, short word)
+    {
+        writeWord(cycles,SP-2, word);
+        setSP(SP-2);
+    }
+    private int readWordFromStack(AtomicInteger atomicInteger)
+    {
+        var word = readWord(atomicInteger,SP);
+        setSP(SP+2);
+        return word;
+    }
 
     private void applyOpFunctions(OpCodes op, short data)
     {
@@ -91,9 +108,15 @@ public class CPU {
                 case JSR ->
                 {
                     var subAddress = fetchWord(cycles);
-                    writeWord(cycles,SP, (short) (PC-1));
+                    writeWordToStack(cycles,(short)(PC-1));
                     setPC(subAddress);
                     cycles.decrementAndGet();
+                }
+                case RTS ->
+                {
+                    var returnAddress = readWordFromStack(cycles);
+                    setPC(returnAddress+1);
+                    cycles.addAndGet(-3);
                 }
                 case LDA_IM -> {
                     A = fetchByte(cycles);
@@ -120,6 +143,10 @@ public class CPU {
                     final var zeroPageAddress = fetchByte(cycles);
                     X = readByte(cycles,zeroPageAddress);
                     applyOpFunctions(op, X);
+                }
+                case NOP ->
+                {
+                    cycles.decrementAndGet();
                 }
                 default -> {
                     throw new UnsupportedOperationException("Unsupported opcode: " + op);
