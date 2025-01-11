@@ -26,6 +26,10 @@ public class CPU {
     private FlagRegister F = new FlagRegister();
 
     private final Memory memory;
+    public void printRegs()
+    {
+        System.out.println("PC:%04X SP:%04X A:%02X X:%02X Y:%02X F:[%s]".formatted(PC,SP,A,X,Y,F.printFlags()));
+    }
     public void reset()
     {
         PC = 0xFFFC;
@@ -34,6 +38,13 @@ public class CPU {
         A = X = Y = 0;
         memory.reset();
     }
+
+
+    private int fetchWord(AtomicInteger cycles)
+    {
+        return fetchByte(cycles) | (fetchByte(cycles)  << 8);
+    }
+
 
     /**
      * read byte from PC and increments pc
@@ -54,6 +65,17 @@ public class CPU {
         return (short) (memory.data[address]&0xff);
     }
 
+    private void writeByte(AtomicInteger cycles, int address, byte value)
+    {
+        memory.data[address] = value;
+        cycles.decrementAndGet();
+    }
+    private void writeWord(AtomicInteger cycles, int address, short word)
+    {
+        writeByte(cycles,address, (byte) (word&0xff));
+        writeByte(cycles,address+1, (byte) ((word>>8)&0xff));
+    }
+
     private void applyOpFunctions(OpCodes op, short data)
     {
         op.getFunctions().forEach(e->e.apply(F,data));
@@ -66,6 +88,13 @@ public class CPU {
             final var op =OpCodes.fromByte(fetchByte(cycles));
             switch (op)
             {
+                case JSR ->
+                {
+                    var subAddress = fetchWord(cycles);
+                    writeWord(cycles,SP, (short) (PC-1));
+                    setPC(subAddress);
+                    cycles.decrementAndGet();
+                }
                 case LDA_IM -> {
                     A = fetchByte(cycles);
                     applyOpFunctions(op, A);
@@ -87,11 +116,17 @@ public class CPU {
                     X = fetchByte(cycles);
                     applyOpFunctions(op, X);
                 }
+                case LDX_ZP -> {
+                    final var zeroPageAddress = fetchByte(cycles);
+                    X = readByte(cycles,zeroPageAddress);
+                    applyOpFunctions(op, X);
+                }
                 default -> {
                     throw new UnsupportedOperationException("Unsupported opcode: " + op);
                 }
             }
             log.info("exec after {}, {}",op,cycles.get());
+            printRegs();
         }
     }
 }

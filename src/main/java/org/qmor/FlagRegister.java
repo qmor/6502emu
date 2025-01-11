@@ -1,11 +1,20 @@
 package org.qmor;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 public class FlagRegister
 {
     private final Set<Flag> fields = EnumSet.noneOf(Flag.class);
+    public String printFlags()
+    {
+        List<String> r = new ArrayList<>();
+        fields.forEach(field -> r.add(field.toString()));
+
+        return String.join(",",r);
+    }
     public void setFlag(Flag flag, boolean value)
     {
         if (value)

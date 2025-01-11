@@ -24,4 +24,6 @@ public class OpFunctions {
      * N - Negative 	result bit 7
      */
     public static final List<BiFunction<FlagRegister, Short, FlagRegister>> ZFIFZERO_NFIFNEG = List.of(ZeroFlagIfZeroValue,NegFlagIf7BitRaised);
+
+    public static final List<BiFunction<FlagRegister, Short, FlagRegister>> NO_AFFECTS = List.of();
 }
