@@ -6,6 +6,9 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+
 //https://www.youtube.com/watch?v=qJgsuQoy9bc&t=29s
 //https://www.nesdev.org/wiki/Instruction_reference#LDA
 //http://www.6502.org/users/obelisk/6502/reference.html#JSR
@@ -97,6 +100,44 @@ public class CPU {
     {
         op.getFunctions().forEach(e->e.apply(F,data));
     }
+    private boolean addressInSamePage(int a1, int a2)
+    {
+        return (a1 & 0x100) == (a2&0x100);
+    }
+
+    private void ldIm(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
+    {
+        destRegWriteAccessor.accept(fetchByte(cycles));
+    }
+    private void ldZp(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
+    {
+        final var zeroPageAddress = fetchByte(cycles);
+        destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress));
+    }
+    private void ldZpReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor,Supplier<Short> addRegReadAccessor )
+    {
+        final var zeroPageAddress = fetchByte(cycles);
+        destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress+addRegReadAccessor.get()));
+        cycles.decrementAndGet();//because of zeroPageAddress+REG
+    }
+    private void ldAbsolute(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
+    {
+        var address = fetchWord(cycles);
+        destRegWriteAccessor.accept((short) memory.data[address]);
+        cycles.decrementAndGet();
+    }
+    private void ldAbsolutePlusAddrReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor, Supplier<Short> addRegReadAccessor )
+    {
+        final var address = fetchWord(cycles);
+        final int addressWithAdd = address+addRegReadAccessor.get();
+        if (!addressInSamePage(address,addressWithAdd))
+        {
+            cycles.decrementAndGet();
+        }
+        destRegWriteAccessor.accept((short) memory.data[addressWithAdd]);
+        cycles.decrementAndGet();
+    }
+
     public void exec(AtomicInteger cycles)
     {
         log.info("enter exec {}",cycles.get());
@@ -118,34 +159,16 @@ public class CPU {
                     setPC(returnAddress+1);
                     cycles.addAndGet(-3);
                 }
-                case LDA_IM -> A = fetchByte(cycles);
-                case LDA_ZP ->
-                {
-                    final var zeroPageAddress = fetchByte(cycles);
-                    A = readByte(cycles,zeroPageAddress);
-                }
-                case LDA_ZP_X -> {
-                    final var zeroPageAddress = fetchByte(cycles);
-                    A = readByte(cycles,zeroPageAddress+X);
-                    cycles.decrementAndGet();//because of zeroPageAddress+X
-                }
-                case LDA_ABSOLUTE -> {
-                    var address = fetchWord(cycles);
-                    A = memory.data[address];
-                    cycles.decrementAndGet();
-                }
+                case LDA_IM -> ldIm(cycles,this::setA);
+                case LDA_ZP -> ldZp(cycles,this::setA);
+                case LDA_ZP_X -> ldZpReg(cycles,this::setA,this::getX);
+                case LDA_ABSOLUTE -> ldAbsolute(cycles, this::setA);
+                case LDA_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getX);
 
-                case LDX_IM -> X = fetchByte(cycles);
-                case LDX_ZP -> {
-                    final var zeroPageAddress = fetchByte(cycles);
-                    X = readByte(cycles,zeroPageAddress);
-                }
-                case LDX_ABSOLUTE ->
-                {
-                    var address = fetchWord(cycles);
-                    X = memory.data[address];
-                    cycles.decrementAndGet();
-                }
+                case LDX_IM -> ldIm(cycles,this::setX);
+                case LDX_ZP -> ldZp(cycles, this::setX);
+                case LDX_ZP_Y -> ldZpReg(cycles, this::setX, this::getY);
+                case LDX_ABSOLUTE -> ldAbsolute(cycles,this::setX);
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
             }
