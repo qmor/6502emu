@@ -8,15 +8,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class InstructionSetTests {
+class InstructionSetTests  extends BaseCpuTest{
 
-    Memory memory = new Memory();
-    CPU cpu = new CPU(memory);
-
-    @BeforeEach
-    public void setup() {
-        cpu.reset();
-    }
     @Test
     void JstAndRtsTest()
     {

@@ -138,6 +138,12 @@ public class CPU {
         cycles.decrementAndGet();
     }
 
+    private void transferRegister(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor, Supplier<Short> srcRegReadAccessor )
+    {
+        cycles.decrementAndGet();
+        destRegWriteAccessor.accept(srcRegReadAccessor.get());
+    }
+
     public void exec(AtomicInteger cycles)
     {
         log.info("enter exec {}",cycles.get());
@@ -168,10 +174,9 @@ public class CPU {
                 case LDA_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getY);
                 case LDA_INDIRECT_X -> {
                     final var instrAddr = fetchByte(cycles)&0xff;
-                    final var baseAddr = (instrAddr+X)&0xff;
+                    final var baseAddr = (instrAddr+X)&0xff;     cycles.decrementAndGet();
                     final var addr = readWord(cycles,baseAddr);
                     A = readByte(cycles,addr);
-                    cycles.decrementAndGet();
                 }
                 case LDA_INDIRECT_Y -> {
                     final var instrAddr = fetchByte(cycles)&0xff;
@@ -195,6 +200,12 @@ public class CPU {
                 case LDY_ZP_X -> ldZpReg(cycles, this::setY, this::getX);
                 case LDY_ABSOLUTE -> ldAbsolute(cycles,this::setY);
                 case LDY_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles,this::setY,this::getX);
+
+
+                case TXA ->transferRegister(cycles,this::setA, this::getX);
+                case TYA ->transferRegister(cycles,this::setA, this::getY);
+                case TAX -> transferRegister(cycles,this::setX, this::getA);
+                case TAY -> transferRegister(cycles,this::setY, this::getA);
 
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);

@@ -8,14 +8,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LdxTests {
-    Memory memory = new Memory();
-    CPU cpu = new CPU(memory);
+class LdxTests extends BaseCpuTest{
 
-    @BeforeEach
-    public void setup() {
-        cpu.reset();
-    }
     @Test
     void testLdxImmediate() {
         var op = OpCodes.LDX_IM;

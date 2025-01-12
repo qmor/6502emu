@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class LdyTests {
+public class LdyTests extends BaseCpuTest{
 
     Memory memory = new Memory();
     CPU cpu = new CPU(memory);

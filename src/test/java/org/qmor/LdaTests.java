@@ -8,14 +8,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class LdaTests {
-    Memory memory = new Memory();
-    CPU cpu = new CPU(memory);
+class LdaTests extends BaseCpuTest{
 
-    @BeforeEach
-    public void setup() {
-        cpu.reset();
-    }
     @Test
     void testLdaImmediate() {
         memory.data[0xfffc] = (byte) OpCodes.LDA_IM.getOpcode();
