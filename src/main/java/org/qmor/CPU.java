@@ -159,16 +159,28 @@ public class CPU {
                     setPC(returnAddress+1);
                     cycles.addAndGet(-3);
                 }
+                //LDA
                 case LDA_IM -> ldIm(cycles,this::setA);
                 case LDA_ZP -> ldZp(cycles,this::setA);
                 case LDA_ZP_X -> ldZpReg(cycles,this::setA,this::getX);
                 case LDA_ABSOLUTE -> ldAbsolute(cycles, this::setA);
                 case LDA_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getX);
+                case LDA_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getY);
 
+                //LDX
                 case LDX_IM -> ldIm(cycles,this::setX);
                 case LDX_ZP -> ldZp(cycles, this::setX);
                 case LDX_ZP_Y -> ldZpReg(cycles, this::setX, this::getY);
                 case LDX_ABSOLUTE -> ldAbsolute(cycles,this::setX);
+                case LDX_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles,this::setX,this::getY);
+
+                //LDY
+                case LDY_IM -> ldIm(cycles,this::setY);
+                case LDY_ZP -> ldZp(cycles, this::setY);
+                case LDY_ZP_X -> ldZpReg(cycles, this::setY, this::getX);
+                case LDY_ABSOLUTE -> ldAbsolute(cycles,this::setY);
+                case LDY_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles,this::setY,this::getX);
+
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
             }
@@ -179,6 +191,10 @@ public class CPU {
             else if (OpGroups.REG_X_LOAD_CODES.contains(op))
             {
                 applyOpFunctions(op, X);
+            }
+            else if (OpGroups.REG_Y_LOAD_CODES.contains(op))
+            {
+                applyOpFunctions(op, Y);
             }
             log.info("exec after {}, {}",op,cycles.get());
             printRegs();
