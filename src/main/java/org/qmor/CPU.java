@@ -166,6 +166,21 @@ public class CPU {
                 case LDA_ABSOLUTE -> ldAbsolute(cycles, this::setA);
                 case LDA_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getX);
                 case LDA_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getY);
+                case LDA_INDIRECT_X -> {
+                    final var instrAddr = fetchByte(cycles)&0xff;
+                    final var baseAddr = (instrAddr+X)&0xff;
+                    final var addr = readWord(cycles,baseAddr);
+                    A = readByte(cycles,addr);
+                    cycles.decrementAndGet();
+                }
+                case LDA_INDIRECT_Y -> {
+                    final var instrAddr = fetchByte(cycles)&0xff;
+                    final var addr = readWord(cycles,instrAddr);
+                    final var finalAddr = addr+Y;
+                    if (!addressInSamePage(addr,finalAddr))
+                        cycles.decrementAndGet();
+                    A = readByte(cycles,finalAddr);
+                }
 
                 //LDX
                 case LDX_IM -> ldIm(cycles,this::setX);
