@@ -45,6 +45,7 @@ public class CPU {
     }
 
 
+
     private int fetchWord(AtomicInteger cycles)
     {
         return fetchByte(cycles) | (fetchByte(cycles)  << 8);
@@ -165,24 +166,41 @@ public class CPU {
      * @param cycles - cycles holder
      * @param destRegWriteAccessor accessor to write destination reg
      */
-    private void ldZp(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
+    private void ldZp(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor,Supplier<Short> addRegReadAccessor)
     {
-        final var zeroPageAddress = fetchByte(cycles);
-        destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress));
+        var addr = fetchByte(cycles);
+        if (addRegReadAccessor!=null)
+        {
+            addr+=addRegReadAccessor.get();
+            cycles.decrementAndGet();
+        }
+        destRegWriteAccessor.accept(readByte(cycles,addr));
     }
 
-    /**
-     * Load register zero page and additional reg
-     * @param cycles - cycles holder
-     * @param destRegWriteAccessor accessor to write destination reg
-     * @param addRegReadAccessor
-     */
-    private void ldZpReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor,Supplier<Short> addRegReadAccessor )
+    private void stZp(AtomicInteger cycles, Supplier<Short> regToStore, Supplier<Short> addAddrReg)
     {
-        final var zeroPageAddress = fetchByte(cycles);
-        destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress+addRegReadAccessor.get()));
-        cycles.decrementAndGet();//because of zeroPageAddress+REG
+        var addr = fetchByte(cycles)&0xff;
+        if (addAddrReg!=null)
+        {
+            addr+=addAddrReg.get();
+            cycles.decrementAndGet();
+        }
+        writeByte(cycles,addr,regToStore.get().byteValue());
     }
+
+    private void stAbsolute(AtomicInteger cycles, Supplier<Short> regToStore,  Supplier<Short> addAddrReg)
+    {
+        var addr = fetchWord(cycles)&0xffff;
+        if (addAddrReg!=null)
+        {
+            addr+=addAddrReg.get();
+            cycles.decrementAndGet();
+        }
+        writeByte(cycles,addr,regToStore.get().byteValue());
+    }
+
+
+
 
     /**
      * load register absolute mode
@@ -249,8 +267,8 @@ public class CPU {
                 }
                 //LDA
                 case LDA_IM -> ldIm(cycles,this::setA);
-                case LDA_ZP -> ldZp(cycles,this::setA);
-                case LDA_ZP_X -> ldZpReg(cycles,this::setA,this::getX);
+                case LDA_ZP -> ldZp(cycles,this::setA,null);
+                case LDA_ZP_X -> ldZp(cycles,this::setA,this::getX);
                 case LDA_ABSOLUTE -> ldAbsolute(cycles, this::setA);
                 case LDA_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getX);
                 case LDA_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getY);
@@ -271,18 +289,46 @@ public class CPU {
 
                 //LDX
                 case LDX_IM -> ldIm(cycles,this::setX);
-                case LDX_ZP -> ldZp(cycles, this::setX);
-                case LDX_ZP_Y -> ldZpReg(cycles, this::setX, this::getY);
+                case LDX_ZP -> ldZp(cycles, this::setX,null);
+                case LDX_ZP_Y -> ldZp(cycles, this::setX, this::getY);
                 case LDX_ABSOLUTE -> ldAbsolute(cycles,this::setX);
                 case LDX_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles,this::setX,this::getY);
 
                 //LDY
                 case LDY_IM -> ldIm(cycles,this::setY);
-                case LDY_ZP -> ldZp(cycles, this::setY);
-                case LDY_ZP_X -> ldZpReg(cycles, this::setY, this::getX);
+                case LDY_ZP -> ldZp(cycles, this::setY,null);
+                case LDY_ZP_X -> ldZp(cycles, this::setY, this::getX);
                 case LDY_ABSOLUTE -> ldAbsolute(cycles,this::setY);
                 case LDY_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles,this::setY,this::getX);
 
+
+                case STA_ZP -> stZp(cycles,this::getA,null);
+                case STA_ZP_X -> stZp(cycles,this::getA,this::getX);
+                case STA_ABSOLUTE -> stAbsolute(cycles,this::getA,null);
+                case STA_ABSOLUTE_X -> stAbsolute(cycles,this::getA,this::getX);
+                case STA_ABSOLUTE_Y -> stAbsolute(cycles,this::getA,this::getY);
+
+
+                case STA_INDIRECT_X -> {
+                    final var instrAddr = fetchByte(cycles)&0xff;
+                    final var baseAddr = (instrAddr+X)&0xff;     cycles.decrementAndGet();
+                    final var addr = readWord(cycles,baseAddr);
+                    writeByte(cycles,addr, (byte) A);
+                }
+                case STA_INDIRECT_Y -> {
+                    final var instrAddr = fetchByte(cycles)&0xff;
+                    final var addr = readWord(cycles,instrAddr);
+                    final var finalAddr = addr+Y; cycles.decrementAndGet();
+                    writeByte(cycles,finalAddr, (byte) A);
+                }
+
+                case STX_ZP -> stZp(cycles,this::getX,null);
+                case STX_ZP_Y -> stZp(cycles,this::getX,this::getY);
+                case STX_ABSOLUTE -> stAbsolute(cycles,this::getX,null);
+
+                case STY_ZP -> stZp(cycles,this::getY,null);
+                case STY_ZP_X -> stZp(cycles,this::getY,this::getX);
+                case STY_ABSOLUTE -> stAbsolute(cycles,this::getY,null);
 
                 case TXA ->transferRegister(cycles,this::setA, this::getX);
                 case TYA ->transferRegister(cycles,this::setA, this::getY);
