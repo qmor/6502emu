@@ -31,9 +31,9 @@ public class CPU {
     private FlagRegister F = new FlagRegister();
 
     private final Memory memory;
-    public void printRegs()
+    public String printRegs()
     {
-        System.out.println("PC:%04X SP:%04X A:%02X X:%02X Y:%02X F:[%s]".formatted(PC,SP,A,X,Y,F.printFlags()));
+        return "PC:%04X SP:%04X A:%02X X:%02X Y:%02X F:[%s]".formatted(PC,SP,A,X,Y,F.printFlags());
     }
     public void reset()
     {
@@ -52,9 +52,9 @@ public class CPU {
 
 
     /**
-     * read byte from PC and increments pc
-     * @param cycles
-     * @return
+     * read byte from memory at PC and increments PC
+     * @param cycles - cycles holder
+     * @return - fetched byte
      */
     private short fetchByte(AtomicInteger cycles)
     {
@@ -64,34 +64,72 @@ public class CPU {
         return (short) res;
     }
 
+    /**
+     * read byte from memory at address
+     * @param cycles - cycles holder
+     * @param address - address to read byte from
+     * @return - byte
+     */
     private short readByte(AtomicInteger cycles, int address)
     {
         cycles.decrementAndGet();
         return (short) (memory.data[address]&0xff);
     }
 
+    /**
+     * Read little endian word from memory at address
+     * @param cycles - cycles holder
+     * @param address - address to read word from
+     * @return word
+     */
+    private int readWord(AtomicInteger cycles, int address)
+    {
+        return readByte(cycles,address)| readByte(cycles,address+1)<<8;
+    }
+
+    /**
+     * Write byte value to memory at address
+     * @param cycles - cycles holder
+     * @param address - address to write byte into
+     * @param value - byte to write
+     */
     private void writeByte(AtomicInteger cycles, int address, byte value)
     {
         memory.data[address] = value;
         cycles.decrementAndGet();
     }
+
+    /**
+     * Write little endian word to memory at address
+     * @param cycles - cycles holder
+     * @param address - address to write word into
+     * @param word - word to write
+     */
     private void writeWord(AtomicInteger cycles, int address, short word)
     {
         writeByte(cycles,address, (byte) (word&0xff));
         writeByte(cycles,address+1, (byte) ((word>>8)&0xff));
     }
-    private int readWord(AtomicInteger cycles, int address)
-    {
-        return readByte(cycles,address)| readByte(cycles,address+1)<<8;
-    }
+
+    /**
+     * Write Little endian word to stack at SP and decrement SP by 2
+     * @param cycles - cycles holder
+     * @param word - word to place to stack
+     */
     private void writeWordToStack(AtomicInteger cycles, short word)
     {
         writeWord(cycles,SP-2, word);
         setSP(SP-2);
     }
-    private int readWordFromStack(AtomicInteger atomicInteger)
+
+    /**
+     * read little endian word from stack at SP and increment SP by 2
+     * @param cycles - cycles holder
+     * @return word fetched from stack
+     */
+    private int readWordFromStack(AtomicInteger cycles)
     {
-        var word = readWord(atomicInteger,SP);
+        var word = readWord(cycles,SP);
         setSP(SP+2);
         return word;
     }
@@ -100,32 +138,70 @@ public class CPU {
     {
         op.getFunctions().forEach(e->e.apply(F,data));
     }
+
+    /**
+     * check if two adresses are within the same 256 bytes page
+     * @param a1 first address
+     * @param a2 second address
+     * @return true if addresses are within same page
+     */
     private boolean addressInSamePage(int a1, int a2)
     {
         return (a1 & 0x100) == (a2&0x100);
     }
 
+    /**
+     * Load register immediate
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     */
     private void ldIm(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
     {
         destRegWriteAccessor.accept(fetchByte(cycles));
     }
+
+    /**
+     * load register zero page
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     */
     private void ldZp(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
     {
         final var zeroPageAddress = fetchByte(cycles);
         destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress));
     }
+
+    /**
+     * Load register zero page and additional reg
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     * @param addRegReadAccessor
+     */
     private void ldZpReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor,Supplier<Short> addRegReadAccessor )
     {
         final var zeroPageAddress = fetchByte(cycles);
         destRegWriteAccessor.accept(readByte(cycles,zeroPageAddress+addRegReadAccessor.get()));
         cycles.decrementAndGet();//because of zeroPageAddress+REG
     }
+
+    /**
+     * load register absolute mode
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     */
     private void ldAbsolute(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
     {
         var address = fetchWord(cycles);
         destRegWriteAccessor.accept((short) memory.data[address]);
         cycles.decrementAndGet();
     }
+
+    /**
+     * load regiser absolute mode with additional register
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     * @param addRegReadAccessor
+     */
     private void ldAbsolutePlusAddrReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor, Supplier<Short> addRegReadAccessor )
     {
         final var address = fetchWord(cycles);
@@ -138,6 +214,12 @@ public class CPU {
         cycles.decrementAndGet();
     }
 
+    /**
+     * transfer (copy) value of one register to another
+     * @param cycles - cycles holder
+     * @param destRegWriteAccessor accessor to write destination reg
+     * @param srcRegReadAccessor accessor to read source reg
+     */
     private void transferRegister(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor, Supplier<Short> srcRegReadAccessor )
     {
         cycles.decrementAndGet();
@@ -223,7 +305,7 @@ public class CPU {
                 applyOpFunctions(op, Y);
             }
             log.info("exec after {}, {}",op,cycles.get());
-            printRegs();
+            log.info("{}",printRegs());
         }
     }
 }
