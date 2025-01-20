@@ -17,10 +17,22 @@ import java.util.function.Supplier;
 @Getter
 @Slf4j
 public class CPU {
+    public static final int STACK_LOW = 0x100;
+    private static final int STACK_SIZE = 0xff;
+    private static final int STACK_HIGH = STACK_LOW+STACK_SIZE;
     @Setter
     private int PC;
-    @Setter
     private int SP;
+
+    public void setSP(int newValue)
+    {
+        SP = newValue&0xff;
+    }
+    public int getSP()
+    {
+        return SP&0xff;
+    }
+
     @Setter
     private short A;
     @Setter
@@ -33,12 +45,12 @@ public class CPU {
     private final Memory memory;
     public String printRegs()
     {
-        return "PC:%04X SP:%04X A:%02X X:%02X Y:%02X F:[%s]".formatted(PC,SP,A,X,Y,F.printFlags());
+        return "PC:%04X SP:%04X A:%02X X:%02X Y:%02X F:[%s]".formatted(PC,getSP(),A,X,Y,F.printFlags());
     }
     public void reset()
     {
         PC = 0xFFFC;
-        SP = 0x00FF;
+        SP = STACK_SIZE;
         F.reset();
         A = X = Y = 0;
         memory.reset();
@@ -119,7 +131,7 @@ public class CPU {
      */
     private void writeWordToStack(AtomicInteger cycles, short word)
     {
-        writeWord(cycles,SP-2, word);
+        writeWord(cycles,STACK_LOW+((SP-2)&0xff), word);
         setSP(SP-2);
     }
 
@@ -130,7 +142,7 @@ public class CPU {
      */
     private int readWordFromStack(AtomicInteger cycles)
     {
-        var word = readWord(cycles,SP);
+        var word = readWord(cycles,STACK_LOW+SP);
         setSP(SP+2);
         return word;
     }

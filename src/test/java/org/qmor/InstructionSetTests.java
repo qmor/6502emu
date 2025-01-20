@@ -22,8 +22,8 @@ class InstructionSetTests  extends BaseCpuTest{
         assertEquals(0,cycles.get());
         assertEquals(0x0700, cpu.getPC());
         assertEquals(0xFD, cpu.getSP());
-        assertEquals(0x02,cpu.getMemory().data[cpu.getSP()]&0xff);
-        assertEquals(0x06,cpu.getMemory().data[cpu.getSP()+1]&0xff);
+        assertEquals(0x02,cpu.getMemory().data[CPU.STACK_LOW+cpu.getSP()]&0xff);
+        assertEquals(0x06,cpu.getMemory().data[CPU.STACK_LOW+cpu.getSP()+1]&0xff);
         cycles.set(OpCodes.RTS.getCycles());
         cpu.exec(cycles);
         assertEquals(0,cycles.get());
@@ -49,8 +49,8 @@ class InstructionSetTests  extends BaseCpuTest{
         assertEquals(0,cycles.get());
         assertEquals(0x1312, cpu.getPC());
         assertEquals(0xfd,cpu.getSP());
-        assertEquals(0x02,cpu.getMemory().data[cpu.getSP()]&0xff);
-        assertEquals(0xff,cpu.getMemory().data[cpu.getSP()+1]&0xff);
+        assertEquals(0x02,cpu.getMemory().data[CPU.STACK_LOW+cpu.getSP()]&0xff);
+        assertEquals(0xff,cpu.getMemory().data[CPU.STACK_LOW+cpu.getSP()+1]&0xff);
     }
 
 
