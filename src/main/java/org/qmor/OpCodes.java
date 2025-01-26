@@ -64,6 +64,13 @@ public enum OpCodes {
     STY_ZP_X(0x94, NO_AFFECTS,4),
     STY_ABSOLUTE(0x8c, NO_AFFECTS,4),
 
+    TSX(0xBA,ZFIFZERO_NFIFNEG,2, REG_X_LOAD_CODES),
+    TXS(0x9A,NO_AFFECTS,2),
+    PHA(0x48,NO_AFFECTS,3),
+    PHP(0x08,NO_AFFECTS,3),
+    PLA(0x64,ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES),
+    PLP(0x28,NO_AFFECTS, 4),
+
     NOP(0xEA,NO_AFFECTS,2);
 
     private final int opcode;

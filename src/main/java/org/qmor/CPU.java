@@ -22,6 +22,12 @@ public class CPU {
     private static final int STACK_HIGH = STACK_LOW+STACK_SIZE;
     @Setter
     private int PC;
+    /**
+     * The 6502 microprocessor supports a 256 byte stack fixed between memory locations $0100 and $01FF.
+     * A special 8-bit register, S, is used to keep track of the next free byte of stack space.
+     * Pushing a byte on to the stack causes the value to be stored at the current free location (e.g. $0100,S)
+     * and then the stack pointer is post decremented. Pull operations reverse this procedure
+     */
     private int SP;
 
     public void setSP(int newValue)
@@ -136,6 +142,16 @@ public class CPU {
     }
 
     /**
+     * Write byte to stack at SP and decrement SP by 1
+     * @param cycles - cycles holder
+     * @param b - byte to place to stack
+     */
+    private void writeByteToStack(AtomicInteger cycles, byte b)
+    {
+        writeByte(cycles, STACK_LOW+((SP-1)&0xff),b);
+        setSP(SP-1);
+    }
+    /**
      * read little endian word from stack at SP and increment SP by 2
      * @param cycles - cycles holder
      * @return word fetched from stack
@@ -145,6 +161,18 @@ public class CPU {
         var word = readWord(cycles,STACK_LOW+SP);
         setSP(SP+2);
         return word;
+    }
+
+    /**
+     * read little endian word from stack at SP and increment SP by 2
+     * @param cycles - cycles holder
+     * @return word fetched from stack
+     */
+    private int readByteFromStack(AtomicInteger cycles)
+    {
+        var b = readByte(cycles,STACK_LOW+SP);
+        setSP(SP+1);
+        return b;
     }
 
     private void applyOpFunctions(OpCodes op, short data)
@@ -351,6 +379,14 @@ public class CPU {
                 case TYA ->transferRegister(cycles,this::setA, this::getY);
                 case TAX -> transferRegister(cycles,this::setX, this::getA);
                 case TAY -> transferRegister(cycles,this::setY, this::getA);
+
+                case TSX -> {X= (short) SP; cycles.decrementAndGet(); }
+                case TXS -> {SP = X; cycles.decrementAndGet();}
+                case PHA -> {writeByteToStack(cycles, (byte) A); cycles.decrementAndGet();}
+                case PLA -> {A = (short) readByteFromStack(cycles);cycles.addAndGet(-2);}
+
+                case PHP -> {writeByteToStack(cycles,(byte)F.getByteValue());cycles.decrementAndGet();}
+                case PLP ->{F.setByteValue((short) (readByteFromStack(cycles)&0xff));cycles.addAndGet(-2);}
 
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);

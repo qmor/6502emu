@@ -12,18 +12,16 @@ public class FlagRegister
 {
     private final Set<Flag> fields = EnumSet.noneOf(Flag.class);
 
-
-
     public FlagRegister getCopy()
     {
-        var newF =  new FlagRegister();
+        final var newF = new FlagRegister();
         fields.forEach(newF::setFlag);
         return newF;
     }
 
     public String printFlags()
     {
-        List<String> r = new ArrayList<>();
+        final List<String> r = new ArrayList<>();
         fields.forEach(field -> r.add(field.toString()));
 
         return String.join(",",r);
@@ -64,6 +62,15 @@ public class FlagRegister
             res = res | (getAsInt(r) << r.getOffset());
         }
         return (short)res;
+    }
+    public void setByteValue(short val)
+    {
+        fields.clear();
+        for (var flag: Flag.values())
+        {
+            if (((val>>flag.getOffset())&1) == 1)
+                setFlag(flag, true);
+        }
     }
 
     @Override
