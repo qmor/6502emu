@@ -37,7 +37,7 @@ public class JmpTests extends BaseCpuTest{
          * will cause the next instruction execution to occur at $BAFC (e.g. the contents of $0120 and $0121).
          */
         final var op = OpCodes.JMP_INDIRECT;
-        var fLatch = cpu.getF();
+        var latchF = cpu.getF().getCopy();
         cpu.setPC(0);
         memory.data[0] = (byte) op.getOpcode();
         memory.data[1] = (byte) 0x11;
@@ -47,7 +47,7 @@ public class JmpTests extends BaseCpuTest{
 
         var cycles = new AtomicInteger(op.getCycles());
         cpu.exec(cycles);
-        assertEquals(fLatch, cpu.getF());
+        assertEquals(latchF, cpu.getF());
         assertEquals(0,cycles.get());
         assertEquals(0x1488,cpu.getPC());
     }

@@ -1,13 +1,26 @@
 package org.qmor;
 
+import lombok.EqualsAndHashCode;
+
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+@EqualsAndHashCode
 public class FlagRegister
 {
     private final Set<Flag> fields = EnumSet.noneOf(Flag.class);
+
+
+
+    public FlagRegister getCopy()
+    {
+        var newF =  new FlagRegister();
+        fields.forEach(newF::setFlag);
+        return newF;
+    }
+
     public String printFlags()
     {
         List<String> r = new ArrayList<>();
@@ -53,4 +66,8 @@ public class FlagRegister
         return (short)res;
     }
 
+    @Override
+    public String toString() {
+        return "[%s]".formatted(printFlags());
+    }
 }
