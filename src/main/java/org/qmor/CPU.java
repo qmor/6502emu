@@ -277,6 +277,11 @@ public class CPU {
                     setPC(returnAddress+1);
                     cycles.addAndGet(-3);
                 }
+                case JMP_ABSOLUTE -> PC = fetchWord(cycles);
+                case JMP_INDIRECT -> {
+                    var instAddr = fetchWord(cycles);
+                    PC = readWord(cycles,instAddr);
+                }
                 //LDA
                 case LDA_IM -> ldIm(cycles,this::setA);
                 case LDA_ZP -> ldZp(cycles,this::setA,null);
