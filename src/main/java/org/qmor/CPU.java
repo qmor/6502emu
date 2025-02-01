@@ -64,7 +64,7 @@ public class CPU {
 
 
 
-    private int fetchWord(AtomicInteger cycles)
+    int fetchWord(AtomicInteger cycles)
     {
         return fetchByte(cycles) | (fetchByte(cycles)  << 8);
     }
@@ -75,7 +75,7 @@ public class CPU {
      * @param cycles - cycles holder
      * @return - fetched byte
      */
-    private short fetchByte(AtomicInteger cycles)
+    short fetchByte(AtomicInteger cycles)
     {
         final var res = memory.data[PC]&0xff;
         PC++;
@@ -89,7 +89,7 @@ public class CPU {
      * @param address - address to read byte from
      * @return - byte
      */
-    private short readByte(AtomicInteger cycles, int address)
+    short readByte(AtomicInteger cycles, int address)
     {
         cycles.decrementAndGet();
         return (short) (memory.data[address]&0xff);
@@ -101,7 +101,7 @@ public class CPU {
      * @param address - address to read word from
      * @return word
      */
-    private int readWord(AtomicInteger cycles, int address)
+    int readWord(AtomicInteger cycles, int address)
     {
         return readByte(cycles,address)| readByte(cycles,address+1)<<8;
     }
@@ -186,36 +186,13 @@ public class CPU {
      * @param a2 second address
      * @return true if addresses are within same page
      */
-    private boolean addressInSamePage(int a1, int a2)
+    boolean addressInSamePage(int a1, int a2)
     {
         return (a1 & 0x100) == (a2&0x100);
     }
 
-    /**
-     * Load register immediate
-     * @param cycles - cycles holder
-     * @param destRegWriteAccessor accessor to write destination reg
-     */
-    private void ldIm(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
-    {
-        destRegWriteAccessor.accept(fetchByte(cycles));
-    }
 
-    /**
-     * load register zero page
-     * @param cycles - cycles holder
-     * @param destRegWriteAccessor accessor to write destination reg
-     */
-    private void ldZp(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor,Supplier<Short> addRegReadAccessor)
-    {
-        var addr = fetchByte(cycles);
-        if (addRegReadAccessor!=null)
-        {
-            addr+=addRegReadAccessor.get();
-            cycles.decrementAndGet();
-        }
-        destRegWriteAccessor.accept(readByte(cycles,addr));
-    }
+
 
     private void stZp(AtomicInteger cycles, Supplier<Short> regToStore, Supplier<Short> addAddrReg)
     {
@@ -242,35 +219,6 @@ public class CPU {
 
 
 
-    /**
-     * load register absolute mode
-     * @param cycles - cycles holder
-     * @param destRegWriteAccessor accessor to write destination reg
-     */
-    private void ldAbsolute(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor)
-    {
-        var address = fetchWord(cycles);
-        destRegWriteAccessor.accept((short) memory.data[address]);
-        cycles.decrementAndGet();
-    }
-
-    /**
-     * load regiser absolute mode with additional register
-     * @param cycles - cycles holder
-     * @param destRegWriteAccessor accessor to write destination reg
-     * @param addRegReadAccessor
-     */
-    private void ldAbsolutePlusAddrReg(AtomicInteger cycles, Consumer<Short> destRegWriteAccessor, Supplier<Short> addRegReadAccessor )
-    {
-        final var address = fetchWord(cycles);
-        final int addressWithAdd = address+addRegReadAccessor.get();
-        if (!addressInSamePage(address,addressWithAdd))
-        {
-            cycles.decrementAndGet();
-        }
-        destRegWriteAccessor.accept((short) memory.data[addressWithAdd]);
-        cycles.decrementAndGet();
-    }
 
     /**
      * transfer (copy) value of one register to another
@@ -283,6 +231,15 @@ public class CPU {
         cycles.decrementAndGet();
         destRegWriteAccessor.accept(srcRegReadAccessor.get());
     }
+
+    enum AndOrXor
+    {
+        AND,
+        OR,
+        XOR
+    }
+
+
 
     public void exec(AtomicInteger cycles)
     {
@@ -306,45 +263,17 @@ public class CPU {
                     cycles.addAndGet(-3);
                 }
                 case JMP_ABSOLUTE -> PC = fetchWord(cycles);
-                case JMP_INDIRECT -> {
-                    var instAddr = fetchWord(cycles);
-                    PC = readWord(cycles,instAddr);
-                }
+                case JMP_INDIRECT -> PC = op.getAddressMode().getAddressModeImpl().getValue(this,cycles)&0xffff;
                 //LDA
-                case LDA_IM -> ldIm(cycles,this::setA);
-                case LDA_ZP -> ldZp(cycles,this::setA,null);
-                case LDA_ZP_X -> ldZp(cycles,this::setA,this::getX);
-                case LDA_ABSOLUTE -> ldAbsolute(cycles, this::setA);
-                case LDA_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getX);
-                case LDA_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles, this::setA, this::getY);
-                case LDA_INDIRECT_X -> {
-                    final var instrAddr = fetchByte(cycles)&0xff;
-                    final var baseAddr = (instrAddr+X)&0xff;     cycles.decrementAndGet();
-                    final var addr = readWord(cycles,baseAddr);
-                    A = readByte(cycles,addr);
-                }
-                case LDA_INDIRECT_Y -> {
-                    final var instrAddr = fetchByte(cycles)&0xff;
-                    final var addr = readWord(cycles,instrAddr);
-                    final var finalAddr = addr+Y;
-                    if (!addressInSamePage(addr,finalAddr))
-                        cycles.decrementAndGet();
-                    A = readByte(cycles,finalAddr);
-                }
+                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A =op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
 
                 //LDX
-                case LDX_IM -> ldIm(cycles,this::setX);
-                case LDX_ZP -> ldZp(cycles, this::setX,null);
-                case LDX_ZP_Y -> ldZp(cycles, this::setX, this::getY);
-                case LDX_ABSOLUTE -> ldAbsolute(cycles,this::setX);
-                case LDX_ABSOLUTE_Y -> ldAbsolutePlusAddrReg(cycles,this::setX,this::getY);
+                case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
 
                 //LDY
-                case LDY_IM -> ldIm(cycles,this::setY);
-                case LDY_ZP -> ldZp(cycles, this::setY,null);
-                case LDY_ZP_X -> ldZp(cycles, this::setY, this::getX);
-                case LDY_ABSOLUTE -> ldAbsolute(cycles,this::setY);
-                case LDY_ABSOLUTE_X -> ldAbsolutePlusAddrReg(cycles,this::setY,this::getX);
+                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y=op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
+
+
 
 
                 case STA_ZP -> stZp(cycles,this::getA,null);
@@ -387,6 +316,10 @@ public class CPU {
 
                 case PHP -> {writeByteToStack(cycles,(byte)F.getByteValue());cycles.decrementAndGet();}
                 case PLP ->{F.setByteValue((short) (readByteFromStack(cycles)&0xff));cycles.addAndGet(-2);}
+
+                case AND_IM,AND_ZP -> A = (short) (A & ((op.getAddressMode().getAddressModeImpl().getValue(this,cycles))&0xff));
+
+                case OR_IM,OR_ZP -> A = (short) (A | ((op.getAddressMode().getAddressModeImpl().getValue(this,cycles))&0xff));
 
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);

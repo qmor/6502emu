@@ -12,7 +12,7 @@ public class JmpTests extends BaseCpuTest{
     void jmpAbsoluteTest()
     {
         final var op = OpCodes.JMP_ABSOLUTE;
-        var fLatch = cpu.getF();
+        var fLatch = cpu.getF().getCopy();
         cpu.setPC(0);
         memory.data[0] = (byte) op.getOpcode();
         memory.data[1] = (byte) 0x88;
