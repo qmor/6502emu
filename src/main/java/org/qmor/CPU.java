@@ -112,7 +112,7 @@ public class CPU {
      * @param address - address to write byte into
      * @param value - byte to write
      */
-    private void writeByte(AtomicInteger cycles, int address, byte value)
+    void writeByte(AtomicInteger cycles, int address, byte value)
     {
         memory.data[address] = value;
         cycles.decrementAndGet();
@@ -192,34 +192,6 @@ public class CPU {
     }
 
 
-
-
-    private void stZp(AtomicInteger cycles, Supplier<Short> regToStore, Supplier<Short> addAddrReg)
-    {
-        var addr = fetchByte(cycles)&0xff;
-        if (addAddrReg!=null)
-        {
-            addr+=addAddrReg.get();
-            cycles.decrementAndGet();
-        }
-        writeByte(cycles,addr,regToStore.get().byteValue());
-    }
-
-    private void stAbsolute(AtomicInteger cycles, Supplier<Short> regToStore,  Supplier<Short> addAddrReg)
-    {
-        var addr = fetchWord(cycles)&0xffff;
-        if (addAddrReg!=null)
-        {
-            addr+=addAddrReg.get();
-            cycles.decrementAndGet();
-        }
-        writeByte(cycles,addr,regToStore.get().byteValue());
-    }
-
-
-
-
-
     /**
      * transfer (copy) value of one register to another
      * @param cycles - cycles holder
@@ -263,46 +235,13 @@ public class CPU {
                     cycles.addAndGet(-3);
                 }
                 case JMP_ABSOLUTE -> PC = fetchWord(cycles);
-                case JMP_INDIRECT -> PC = op.getAddressMode().getAddressModeImpl().getValue(this,cycles)&0xffff;
-                //LDA
-                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A =op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
-
-                //LDX
-                case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
-
-                //LDY
-                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y=op.getAddressMode().getAddressModeImpl().getValue(this,cycles);
-
-
-
-
-                case STA_ZP -> stZp(cycles,this::getA,null);
-                case STA_ZP_X -> stZp(cycles,this::getA,this::getX);
-                case STA_ABSOLUTE -> stAbsolute(cycles,this::getA,null);
-                case STA_ABSOLUTE_X -> stAbsolute(cycles,this::getA,this::getX);
-                case STA_ABSOLUTE_Y -> stAbsolute(cycles,this::getA,this::getY);
-
-
-                case STA_INDIRECT_X -> {
-                    final var instrAddr = fetchByte(cycles)&0xff;
-                    final var baseAddr = (instrAddr+X)&0xff;     cycles.decrementAndGet();
-                    final var addr = readWord(cycles,baseAddr);
-                    writeByte(cycles,addr, (byte) A);
-                }
-                case STA_INDIRECT_Y -> {
-                    final var instrAddr = fetchByte(cycles)&0xff;
-                    final var addr = readWord(cycles,instrAddr);
-                    final var finalAddr = addr+Y; cycles.decrementAndGet();
-                    writeByte(cycles,finalAddr, (byte) A);
-                }
-
-                case STX_ZP -> stZp(cycles,this::getX,null);
-                case STX_ZP_Y -> stZp(cycles,this::getX,this::getY);
-                case STX_ABSOLUTE -> stAbsolute(cycles,this::getX,null);
-
-                case STY_ZP -> stZp(cycles,this::getY,null);
-                case STY_ZP_X -> stZp(cycles,this::getY,this::getX);
-                case STY_ABSOLUTE -> stAbsolute(cycles,this::getY,null);
+                case JMP_INDIRECT -> PC = op.getAddressMode().getReadImpl().readValue(this,cycles)&0xffff;
+                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A =op.getAddressMode().getReadImpl().readValue(this,cycles);
+                case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = op.getAddressMode().getReadImpl().readValue(this,cycles);
+                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y=op.getAddressMode().getReadImpl().readValue(this,cycles);
+                case STA_ZP,STA_ZP_X,STA_ABSOLUTE,STA_ABSOLUTE_X,STA_ABSOLUTE_Y,STA_INDIRECT_X,STA_INDIRECT_Y ->op.getAddressMode().getWriteImpl().writeValue(this,cycles,A);
+                case STX_ZP,STX_ZP_Y,STX_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,X);
+                case STY_ZP,STY_ZP_X,STY_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,Y);
 
                 case TXA ->transferRegister(cycles,this::setA, this::getX);
                 case TYA ->transferRegister(cycles,this::setA, this::getY);
@@ -317,9 +256,9 @@ public class CPU {
                 case PHP -> {writeByteToStack(cycles,(byte)F.getByteValue());cycles.decrementAndGet();}
                 case PLP ->{F.setByteValue((short) (readByteFromStack(cycles)&0xff));cycles.addAndGet(-2);}
 
-                case AND_IM,AND_ZP -> A = (short) (A & ((op.getAddressMode().getAddressModeImpl().getValue(this,cycles))&0xff));
+                case AND_IM,AND_ZP -> A = (short) (A & ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
 
-                case OR_IM,OR_ZP -> A = (short) (A | ((op.getAddressMode().getAddressModeImpl().getValue(this,cycles))&0xff));
+                case OR_IM,OR_ZP -> A = (short) (A | ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
 
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
