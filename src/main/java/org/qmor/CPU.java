@@ -236,9 +236,9 @@ public class CPU {
                 }
                 case JMP_ABSOLUTE -> PC = fetchWord(cycles);
                 case JMP_INDIRECT -> PC = op.getAddressMode().getReadImpl().readValue(this,cycles)&0xffff;
-                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A =op.getAddressMode().getReadImpl().readValue(this,cycles);
+                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A = op.getAddressMode().getReadImpl().readValue(this,cycles);
                 case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = op.getAddressMode().getReadImpl().readValue(this,cycles);
-                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y=op.getAddressMode().getReadImpl().readValue(this,cycles);
+                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y = op.getAddressMode().getReadImpl().readValue(this,cycles);
                 case STA_ZP,STA_ZP_X,STA_ABSOLUTE,STA_ABSOLUTE_X,STA_ABSOLUTE_Y,STA_INDIRECT_X,STA_INDIRECT_Y ->op.getAddressMode().getWriteImpl().writeValue(this,cycles,A);
                 case STX_ZP,STX_ZP_Y,STX_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,X);
                 case STY_ZP,STY_ZP_X,STY_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,Y);
@@ -256,9 +256,11 @@ public class CPU {
                 case PHP -> {writeByteToStack(cycles,(byte)F.getByteValue());cycles.decrementAndGet();}
                 case PLP ->{F.setByteValue((short) (readByteFromStack(cycles)&0xff));cycles.addAndGet(-2);}
 
-                case AND_IM,AND_ZP -> A = (short) (A & ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+                case AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y -> A = (short) (A & ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
 
-                case OR_IM,OR_ZP -> A = (short) (A | ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+                case OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y -> A = (short) (A | ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+
+                case EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y -> A = (short) (A ^ ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
 
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
