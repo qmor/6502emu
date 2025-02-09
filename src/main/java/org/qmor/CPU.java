@@ -262,6 +262,14 @@ public class CPU {
 
                 case EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y -> A = (short) (A ^ ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
 
+
+                case BIT_ABSOLUTE,BIT_ZP -> {
+                    var v = op.getAddressMode().getReadImpl().readValue(this,cycles);
+                    this.getF().setFlag(Flag.Z, (A & v) == 0);
+                    this.getF().setFlag(Flag.V, ((v>>6)&1)==1);
+                    this.getF().setFlag(Flag.N, ((v>>7)&1)==1);
+                }
+
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
             }
