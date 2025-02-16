@@ -4,16 +4,15 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import org.qmor.AddressMode.AddressModeFuncGetAddr.Direction;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.qmor.OpCodes.*;
-import org.qmor.AddressMode.AddressModeFuncGetAddr.Direction;
 
 //https://www.youtube.com/watch?v=qJgsuQoy9bc&t=29s
 //https://www.nesdev.org/wiki/Instruction_reference#LDA
@@ -192,9 +191,9 @@ public class CPU {
      * @param a2 second address
      * @return true if addresses are within same page
      */
-    boolean addressInSamePage(int a1, int a2)
+    boolean addressNotInSamePage(int a1, int a2)
     {
-        return (a1 & 0x100) == (a2&0x100);
+        return (a1 & 0x100) != (a2 & 0x100);
     }
 
 
@@ -211,9 +210,9 @@ public class CPU {
     }
 
 
-    private final static List<OpCodes> OPERATION_OR = List.of(OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y);
-    private final static List<OpCodes> OPERATION_XOR = List.of(EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y);
-    private final static List<OpCodes> OPERATION_AND = List.of(AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y);
+    private static final List<OpCodes> OPERATION_OR = List.of(OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y);
+    private static final List<OpCodes> OPERATION_XOR = List.of(EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y);
+    private static final List<OpCodes> OPERATION_AND = List.of(AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y);
     public void exec(AtomicInteger cycles)
     {
         log.info("enter exec {}",cycles.get());

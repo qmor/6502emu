@@ -74,7 +74,7 @@ public enum AddressMode {
         final var address = cpu.fetchWord(cycles);
         final int addressWithAdd = address+cpu.getX();
 
-        if (dir == AddressModeFuncGetAddr.Direction.R && !cpu.addressInSamePage(address,addressWithAdd))
+        if (dir == AddressModeFuncGetAddr.Direction.R && cpu.addressNotInSamePage(address, addressWithAdd))
         {
             cycles.decrementAndGet();
         }
@@ -91,7 +91,7 @@ public enum AddressMode {
     {
         final var address = cpu.fetchWord(cycles);
         final int addressWithAdd = address+cpu.getY();
-        if (dir == AddressModeFuncGetAddr.Direction.R && !cpu.addressInSamePage(address,addressWithAdd))
+        if (dir == AddressModeFuncGetAddr.Direction.R && cpu.addressNotInSamePage(address, addressWithAdd))
         {
             cycles.decrementAndGet();
         }
@@ -120,7 +120,7 @@ public enum AddressMode {
         final var instrAddr = cpu.fetchByte(cycles)&0xff;
         final var addr = cpu.readWord(cycles,instrAddr);
         final var finalAddr = addr+cpu.getY();
-        if (direction == AddressModeFuncGetAddr.Direction.R && !cpu.addressInSamePage(addr,finalAddr))
+        if (direction == AddressModeFuncGetAddr.Direction.R && cpu.addressNotInSamePage(addr, finalAddr))
             cycles.decrementAndGet();
 
         if (direction == AddressModeFuncGetAddr.Direction.W)

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class JmpTests extends BaseCpuTest{
+class JmpTests extends BaseCpuTest{
 
     @Test
     void jmpAbsoluteTest()
