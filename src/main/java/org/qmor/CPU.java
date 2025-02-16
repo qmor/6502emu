@@ -5,9 +5,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static org.qmor.OpCodes.*;
+import org.qmor.AddressMode.AddressModeFuncGetAddr.Direction;
 
 //https://www.youtube.com/watch?v=qJgsuQoy9bc&t=29s
 //https://www.nesdev.org/wiki/Instruction_reference#LDA
@@ -204,15 +210,10 @@ public class CPU {
         destRegWriteAccessor.accept(srcRegReadAccessor.get());
     }
 
-    enum AndOrXor
-    {
-        AND,
-        OR,
-        XOR
-    }
 
-
-
+    private final static List<OpCodes> OPERATION_OR = List.of(OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y);
+    private final static List<OpCodes> OPERATION_XOR = List.of(EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y);
+    private final static List<OpCodes> OPERATION_AND = List.of(AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y);
     public void exec(AtomicInteger cycles)
     {
         log.info("enter exec {}",cycles.get());
@@ -235,13 +236,13 @@ public class CPU {
                     cycles.addAndGet(-3);
                 }
                 case JMP_ABSOLUTE -> PC = fetchWord(cycles);
-                case JMP_INDIRECT -> PC = op.getAddressMode().getReadImpl().readValue(this,cycles)&0xffff;
-                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A = op.getAddressMode().getReadImpl().readValue(this,cycles);
-                case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = op.getAddressMode().getReadImpl().readValue(this,cycles);
-                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y = op.getAddressMode().getReadImpl().readValue(this,cycles);
-                case STA_ZP,STA_ZP_X,STA_ABSOLUTE,STA_ABSOLUTE_X,STA_ABSOLUTE_Y,STA_INDIRECT_X,STA_INDIRECT_Y ->op.getAddressMode().getWriteImpl().writeValue(this,cycles,A);
-                case STX_ZP,STX_ZP_Y,STX_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,X);
-                case STY_ZP,STY_ZP_X,STY_ABSOLUTE -> op.getAddressMode().getWriteImpl().writeValue(this,cycles,Y);
+                case JMP_INDIRECT -> PC = readWord(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles, Direction.R));
+                case LDA_IM, LDA_ZP, LDA_ZP_X, LDA_ABSOLUTE, LDA_ABSOLUTE_X, LDA_ABSOLUTE_Y,LDA_INDIRECT_X,LDA_INDIRECT_Y -> A = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                case LDX_IM, LDX_ZP, LDX_ZP_Y, LDX_ABSOLUTE, LDX_ABSOLUTE_Y -> X = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                case LDY_IM, LDY_ZP, LDY_ZP_X, LDY_ABSOLUTE, LDY_ABSOLUTE_X -> Y = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                case STA_ZP,STA_ZP_X,STA_ABSOLUTE,STA_ABSOLUTE_X,STA_ABSOLUTE_Y,STA_INDIRECT_X,STA_INDIRECT_Y ->writeByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.W), (byte) A);
+                case STX_ZP,STX_ZP_Y,STX_ABSOLUTE -> writeByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.W), (byte) X);
+                case STY_ZP,STY_ZP_X,STY_ABSOLUTE -> writeByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.W), (byte) Y);
 
                 case TXA ->transferRegister(cycles,this::setA, this::getX);
                 case TYA ->transferRegister(cycles,this::setA, this::getY);
@@ -256,15 +257,40 @@ public class CPU {
                 case PHP -> {writeByteToStack(cycles,(byte)F.getByteValue());cycles.decrementAndGet();}
                 case PLP ->{F.setByteValue((short) (readByteFromStack(cycles)&0xff));cycles.addAndGet(-2);}
 
-                case AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y -> A = (short) (A & ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+                case AND_IM,AND_ZP,AND_ZP_X,AND_ABSOLUTE,AND_ABSOLUTE_X,AND_ABSOLUTE_Y,AND_INDIRECT_X,AND_INDIRECT_Y,
+                 OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y,
+                 EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y -> {
+                    BinaryOperator<Integer> f = (a, b)->a&b;
+                    var val =readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                    if (OPERATION_OR.contains(op)) f  = (a,b)->a|b;
+                    else if (OPERATION_XOR.contains(op)) f = (a,b)->a^b;
+                    A = f.apply((int)A,(int)val).shortValue();
+                }
 
-                case OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y -> A = (short) (A | ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+                case DEX, DEY,INX, INY -> {
+                    cycles.decrementAndGet();
+                    final boolean isY = List.of(DEY, INY ).contains(op);
+                    final int sign = List.of(DEY,DEX).contains(op)?-1:1;
+                    final Supplier<Short> getter = isY?this::getY:this::getX;
+                    final Consumer<Short> setter = isY?this::setY:this::setX;
+                    setter.accept((short) ((short) (getter.get() + sign)&0xff));
+                }
 
-                case EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y -> A = (short) (A ^ ((op.getAddressMode().getReadImpl().readValue(this,cycles))&0xff));
+                case INC_ZP,INC_ZP_X, INC_ABSOLUTE,INC_ABSOLUTE_X, DEC_ZP,DEC_ZP_X,DEC_ABSOLUTE,DEC_ABSOLUTE_X ->
+                {
+                    var sign = List.of(INC_ZP,INC_ZP_X,INC_ABSOLUTE,INC_ABSOLUTE_X).contains(op)?1:-1;
+                    var addr = op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.W);
+                    var val = (short)((readByte(cycles,addr) +sign)&0xff);
+                    OpFunctions.ZeroFlagIfZeroValue.apply(this.F,val);
+                    OpFunctions.NegFlagIf7BitRaised.apply(this.F,val);
+                    writeByte(cycles,addr, (byte) val);
+                    cycles.decrementAndGet();
+                }
+
 
 
                 case BIT_ABSOLUTE,BIT_ZP -> {
-                    var v = op.getAddressMode().getReadImpl().readValue(this,cycles);
+                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
                     this.getF().setFlag(Flag.Z, (A & v) == 0);
                     this.getF().setFlag(Flag.V, ((v>>6)&1)==1);
                     this.getF().setFlag(Flag.N, ((v>>7)&1)==1);
