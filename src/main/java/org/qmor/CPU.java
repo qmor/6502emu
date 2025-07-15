@@ -295,6 +295,41 @@ public class CPU {
                     this.getF().setFlag(Flag.N, ((v>>7)&1)==1);
                 }
 
+                case ADC_IM -> A+= (short)(readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R))+((this.getF().getAsBoolean(Flag.C))?1:0));
+                case SBC_IM -> A-= (short)(readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R))+(this.getF().getAsBoolean(Flag.C)?0:1));
+                case CMP_IM ->
+                {
+                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                    this.F.setFlag(Flag.C, A >= v);
+                    this.F.setFlag(Flag.Z, A == v);
+                    this.F.setFlag(Flag.N, A-v<0);
+
+                }
+                case CPX_IM ->
+                {
+                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                    this.F.setFlag(Flag.C, X >= v);
+                    this.F.setFlag(Flag.Z, X == v);
+                    this.F.setFlag(Flag.N, X-v<0);
+
+                }
+                case CPY_IM ->
+                {
+                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
+                    this.F.setFlag(Flag.C, Y >= v);
+                    this.F.setFlag(Flag.Z, Y == v);
+                    this.F.setFlag(Flag.N, Y-v<0);
+
+                }
+                case CLC-> {
+                    this.F.setFlag(Flag.C, false);
+                    cycles.decrementAndGet();
+                }
+                case SEC -> {
+                    this.F.setFlag(Flag.C, true);
+                    cycles.decrementAndGet();
+                }
+
                 case NOP -> cycles.decrementAndGet();
                 default -> throw new UnsupportedOperationException("Unsupported opcode: " + op);
             }
@@ -310,6 +345,9 @@ public class CPU {
             {
                 applyOpFunctions(op, Y);
             }
+            A = (short)(A&0xff);
+            X = (short)(X&0xff);
+            Y = (short)(Y&0xff);
             log.info("exec after {}, {}",op,cycles.get());
             log.info("{}",printRegs());
         }

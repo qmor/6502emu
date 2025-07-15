@@ -10,7 +10,10 @@ import java.util.function.BiFunction;
 
 import static org.qmor.OpFunctions.NO_AFFECTS;
 import static org.qmor.OpFunctions.ZFIFZERO_NFIFNEG;
-import static org.qmor.OpGroups.*;
+import static org.qmor.OpFunctions.ZFIFZERO_NFIFNEG_CIFCARRY;
+import static org.qmor.OpGroups.REG_A_LOAD_CODES;
+import static org.qmor.OpGroups.REG_X_LOAD_CODES;
+import static org.qmor.OpGroups.REG_Y_LOAD_CODES;
 
 
 @Getter
@@ -23,7 +26,7 @@ public enum OpCodes {
     JMP_INDIRECT(0x6C,NO_AFFECTS,5,AddressMode.INDIRECT),
 
     LDA_IM(0xa9, ZFIFZERO_NFIFNEG,2,REG_A_LOAD_CODES, AddressMode.IMMEDIATE),
-    LDA_ZP(0x5a, ZFIFZERO_NFIFNEG,3,REG_A_LOAD_CODES, AddressMode.ZERO_PAGE),
+    LDA_ZP(0xa5, ZFIFZERO_NFIFNEG,3,REG_A_LOAD_CODES, AddressMode.ZERO_PAGE),
     LDA_ZP_X(0xB5, ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES, AddressMode.ZERO_PAGE_X),
     LDA_ABSOLUTE(0xAD, ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES, AddressMode.ABSOLUTE),
     LDA_ABSOLUTE_X(0xBD, ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES,AddressMode.ABSOLUTE_X),
@@ -69,7 +72,7 @@ public enum OpCodes {
     TXS(0x9A,NO_AFFECTS,2,AddressMode.NONE),
     PHA(0x48,NO_AFFECTS,3,AddressMode.NONE),
     PHP(0x08,NO_AFFECTS,3,AddressMode.NONE),
-    PLA(0x64,ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES,AddressMode.NONE),
+    PLA(0x68,ZFIFZERO_NFIFNEG,4,REG_A_LOAD_CODES,AddressMode.NONE),
     PLP(0x28,NO_AFFECTS, 4,AddressMode.NONE),
 
 
@@ -120,7 +123,13 @@ public enum OpCodes {
     BIT_ZP(0x24,NO_AFFECTS,3,REG_A_LOAD_CODES,AddressMode.ZERO_PAGE),
     BIT_ABSOLUTE(0x2C,NO_AFFECTS,4,REG_A_LOAD_CODES,AddressMode.ABSOLUTE),
 
-
+    ADC_IM(0x69,ZFIFZERO_NFIFNEG_CIFCARRY,2, REG_A_LOAD_CODES,AddressMode.IMMEDIATE),
+    SBC_IM(0xE9,ZFIFZERO_NFIFNEG_CIFCARRY,2, REG_A_LOAD_CODES,AddressMode.IMMEDIATE),
+    CMP_IM(0xC9,NO_AFFECTS,2,AddressMode.IMMEDIATE),
+    CPX_IM(0xE0,NO_AFFECTS,2,AddressMode.IMMEDIATE),
+    CPY_IM(0xC0,NO_AFFECTS,2,AddressMode.IMMEDIATE),
+    SEC(0x38, NO_AFFECTS, 2, AddressMode.NONE),
+    CLC(0x18, NO_AFFECTS, 2, AddressMode.NONE),
     NOP(0xEA,NO_AFFECTS,2,AddressMode.NONE);
 
     private final int opcode;
@@ -153,7 +162,7 @@ public enum OpCodes {
                 return b;
             }
         }
-        throw new IllegalArgumentException("Unknown opcode %s" + "%02X".formatted(opcode));
+        throw new IllegalArgumentException("Unknown opcode %02x".formatted(opcode));
     }
 
 
