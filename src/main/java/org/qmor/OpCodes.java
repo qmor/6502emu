@@ -127,9 +127,14 @@ public enum OpCodes {
     SBC_IM(0xE9,ZFIFZERO_NFIFNEG_CIFCARRY,2, REG_A_LOAD_CODES,AddressMode.IMMEDIATE),
     CMP_IM(0xC9,NO_AFFECTS,2,AddressMode.IMMEDIATE),
     CPX_IM(0xE0,NO_AFFECTS,2,AddressMode.IMMEDIATE),
+    CPX_ZP(0xE4,NO_AFFECTS,3,AddressMode.ZERO_PAGE),
+    CPX_ABSOLUTE(0xEC,NO_AFFECTS,4,AddressMode.ABSOLUTE),
     CPY_IM(0xC0,NO_AFFECTS,2,AddressMode.IMMEDIATE),
+    CPY_ZP(0xC4,NO_AFFECTS,3,AddressMode.ZERO_PAGE),
+    CPY_ABSOLUTE(0xCC,NO_AFFECTS,4,AddressMode.ABSOLUTE),
     SEC(0x38, NO_AFFECTS, 2, AddressMode.NONE),
     CLC(0x18, NO_AFFECTS, 2, AddressMode.NONE),
+    CLV(0xB8, NO_AFFECTS, 2, AddressMode.NONE),
     NOP(0xEA,NO_AFFECTS,2,AddressMode.NONE);
 
     private final int opcode;

@@ -209,6 +209,14 @@ public class CPU {
         destRegWriteAccessor.accept(srcRegReadAccessor.get());
     }
 
+    private void cmp(final Supplier<Short> srcRegReadAccessor, final short val)
+    {
+        final var reg = srcRegReadAccessor.get();
+        this.F.setFlag(Flag.C, reg >= val);
+        this.F.setFlag(Flag.Z, reg == val);
+        this.F.setFlag(Flag.N, reg-val<0);
+    }
+
 
     private static final List<OpCodes> OPERATION_OR = List.of(OR_IM,OR_ZP,OR_ZP_X,OR_ABSOLUTE,OR_ABSOLUTE_X,OR_ABSOLUTE_Y,OR_INDIRECT_X,OR_INDIRECT_Y);
     private static final List<OpCodes> OPERATION_XOR = List.of(EOR_IM,EOR_ZP,EOR_ZP_X,EOR_ABSOLUTE,EOR_ABSOLUTE_X,EOR_ABSOLUTE_Y,EOR_INDIRECT_X,EOR_INDIRECT_Y);
@@ -297,36 +305,16 @@ public class CPU {
 
                 case ADC_IM -> A+= (short)(readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R))+((this.getF().getAsBoolean(Flag.C))?1:0));
                 case SBC_IM -> A-= (short)(readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R))+(this.getF().getAsBoolean(Flag.C)?0:1));
-                case CMP_IM ->
-                {
-                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
-                    this.F.setFlag(Flag.C, A >= v);
-                    this.F.setFlag(Flag.Z, A == v);
-                    this.F.setFlag(Flag.N, A-v<0);
-
-                }
-                case CPX_IM ->
-                {
-                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
-                    this.F.setFlag(Flag.C, X >= v);
-                    this.F.setFlag(Flag.Z, X == v);
-                    this.F.setFlag(Flag.N, X-v<0);
-
-                }
-                case CPY_IM ->
-                {
-                    var v = readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R));
-                    this.F.setFlag(Flag.C, Y >= v);
-                    this.F.setFlag(Flag.Z, Y == v);
-                    this.F.setFlag(Flag.N, Y-v<0);
-
-                }
-                case CLC-> {
-                    this.F.setFlag(Flag.C, false);
+                case CMP_IM -> cmp(()->A,readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R)));
+                case CPX_IM,CPX_ZP,CPX_ABSOLUTE ->cmp(()->X,readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R)));
+                case CPY_IM,CPY_ZP,CPY_ABSOLUTE ->cmp(()->Y,readByte(cycles,op.getAddressMode().getAddressModeImpl().getAddr(this,cycles,Direction.R)));
+                case SEC,CLC-> {
+                    this.F.setFlag(Flag.C, op==SEC);
                     cycles.decrementAndGet();
                 }
-                case SEC -> {
-                    this.F.setFlag(Flag.C, true);
+                case CLV ->
+                {
+                    this.F.setFlag(Flag.V,false);
                     cycles.decrementAndGet();
                 }
 
